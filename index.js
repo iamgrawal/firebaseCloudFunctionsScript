@@ -21,30 +21,25 @@ const getBadgeCodeId = async (badgeCode) => {
   return badgeIds;
 };
 
-const getUsersHavingBadgeId = async (badgeIds) => {
-  const edataRef = await db.collection('edata');
-  const userDocuments = await edataRef.listDocuments();
-  
-  if (userDocuments.empty) {
-    return null;
-  }
-
+const getUsersHavingBadgeId = async (badgeId) => {
   const users = [];
   
-  for (const userDocument of userDocuments) {
-    const userDocumentSnapshot = await userDocument.get();
-    const userBadgeSnapshots = await userDocument.collection('badges').where('codeId', '==', badgeIds[0]).get();
+  const queryData = await db.collectionGroup('badges').where('codeId', '==', badgeId).get();
+  for (const badgeSnapshot of queryData.docs) {
+    const userDataSnapshot = await badgeSnapshot.ref.parent.parent.get();
   
-    if (!userBadgeSnapshots.empty) {
-      users.push(userDocumentSnapshot.data());
+    if (!userDataSnapshot.empty) {
+      users.push(userDataSnapshot.data());
     }
   }
   return users;
 };
 
 const getUsersHavingBadgeName = async (badgeCode) => {
-  const badgeId = await getBadgeCodeId(badgeCode);
+  const badgeIds = await getBadgeCodeId(badgeCode);
   if (!badgeId) return null;
+
+  const [badgeId] = badgeIds;
   
   const users = await getUsersHavingBadgeId(badgeId);
   if (!users) return null;
@@ -52,4 +47,9 @@ const getUsersHavingBadgeName = async (badgeCode) => {
   return users;
 };
 
-export default getUsersHavingBadgeName;
+getUsersHavingBadgeName('USERSIGNUP').then((users) => {
+  console.log(users);
+});
+
+
+module.exports = getUsersHavingBadgeName;
