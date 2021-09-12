@@ -8,6 +8,15 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+const NETWORKING_TYPES = [
+  'Networking with Android Experts',
+  'Networking with Web Experts',
+  'Networking with Google Cloud Experts',
+  'Networking with community organisers',
+  'Networking with Flutter Experts',
+  'Networking with Talent Acquisition team /HRs',
+];
+
 const getBadgeCodeId = async (badgeCode) => {
   const badgeRef = await db.collection('badges');
   const badgeSnapshot = await badgeRef.where('code', '==', badgeCode).get();
@@ -47,9 +56,53 @@ const getUsersHavingBadgeName = async (badgeCode) => {
   return users;
 };
 
-getUsersHavingBadgeName('USERSIGNUP').then((users) => {
-  console.log(users);
-});
+const getUsersHavingNetworkingType = async (networkingType) => {
+  const users = [];
+
+  const queryData = await db.collection('edata').where('networkingType', 'array-contains', networkingType).get();
+  if (!queryData.empty) {
+    queryData.forEach((usersSnapshot) => {
+      users.push(usersSnapshot.data());
+    });
+  }
+  return users;
+};
+
+
+const getUsersCountForEachNetworkingTypes = async () => {
+  const result = [];
+  for (const networkingType of NETWORKING_TYPES) {
+    const { length } = await getUsersHavingNetworkingType(networkingType);
+    result.push([networkingType, length]);
+  }
+  return result;
+};
+
+const getUsersCountForEachBadges = async () => {
+  const result = [];
+  const badgesData = [];
+  const badgesRefs = await db.collection('badges').listDocuments();
+  for (const badgeDoc of badgesRefs) {
+    const badgeSnap = await (await badgeDoc.get());
+    badgesData.push({ badgeId: badgeDoc.id, ...badgeSnap.data() });
+  }
+  for (const { badgeId, code, name, image } of badgesData) {
+    const usersData = await getUsersHavingBadgeId(badgeId);
+    result.push({
+      badgeId,
+      code,
+      name,
+      image,
+      count: usersData.length,
+    });
+  }
+  return result;
+};
+
+// getUsersCountForEachNetworkingTypes().then((users) => console.log(users));
+// getUsersCountForEachBadges().then((users) => console.log(users));
+// getUsersHavingNetworkingType('Network with Google Cloud Experts').then((users) => console.log(users));
+// getUsersHavingBadgeId('CblOFXpLu9Oez1xygQJA').then((users) => console.log(users));
 
 
 module.exports = getUsersHavingBadgeName;
